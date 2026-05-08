@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pomodoro</title>
+<hta:application
+  applicationname="Pomodoro"
+  border="dialog"
+  borderstyle="normal"
+  caption="Pomodoro Timer"
+  contextmenu="no"
+  innerborder="no"
+  maximizebutton="no"
+  minimizebutton="yes"
+  navigable="no"
+  scroll="no"
+  showintaskbar="yes"
+  singleinstance="yes"
+  sysmenu="yes"
+/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    display: flex; justify-content: center; align-items: center;
+    height: 100vh; overflow: hidden;
+  }
+
+  .container {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 36px 40px; width: 400px;
+  }
+  .container > * + * { margin-top: 26px; }
+
+  /* Header */
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%;
+  }
+  .logo {
+    font-size: 12px; font-weight: 700; letter-spacing: 3px;
+    color: #484f58;
+  }
+  .pomo-count {
+    font-size: 14px; color: #8b949e;
+    display: flex; align-items: center;
+  }
+  .pomo-count .count-val { margin: 0 3px 0 6px; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+    background: #21262d; margin-left: 3px;
+  }
+  .dot.fill { background: #da3633; }
+
+  /* Timer ring */
+  .ring-wrap {
+    position: relative; width: 320px; height: 320px;
+  }
+  .time-display {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .time-num {
+    font-size: 68px; font-weight: 300; letter-spacing: -2px; line-height: 1;
+  }
+  .time-label {
+    font-size: 13px; color: #484f58; letter-spacing: 3px; margin-top: 8px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex; width: 100%;
+    background: #161b22; border-radius: 10px; padding: 4px;
+  }
+  .tab {
+    flex: 1; text-align: center; padding: 11px 0;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    color: #8b949e; border-radius: 8px;
+    background: transparent; border: none;
+    font-family: inherit; outline: none;
+  }
+  .tab:hover { color: #c9d1d9; }
+  .tab.sel { background: #21262d; color: #e6edf3; }
+  .tab.sel.work  { color: #f78166; }
+  .tab.sel.break { color: #7ee787; }
+  .tab.sel.long  { color: #79c0ff; }
+
+  /* Controls */
+  .controls {
+    display: flex; align-items: center; justify-content: center; width: 100%;
+  }
+  .btn {
+    border: none; cursor: pointer; font-family: inherit;
+    outline: none; display: flex; align-items: center; justify-content: center;
+  }
+  .btn:active { transform: scale(0.92); }
+
+  .btn-play {
+    width: 80px; height: 80px; border-radius: 50%;
+    font-size: 30px; color: #ffffff; margin: 0 32px;
+  }
+  .btn-play.start {
+    background: #da3633;
+    box-shadow: 0 4px 20px rgba(218, 54, 51, 0.3);
+  }
+  .btn-play.start:hover { box-shadow: 0 6px 26px rgba(218, 54, 51, 0.5); }
+  .btn-play.pause {
+    background: #d29922;
+    box-shadow: 0 4px 20px rgba(210, 153, 34, 0.3);
+  }
+  .btn-play.pause:hover { box-shadow: 0 6px 26px rgba(210, 153, 34, 0.5); }
+
+  .btn-sm {
+    width: 50px; height: 50px; border-radius: 50%;
+    font-size: 19px; color: #484f58;
+    background: #161b22; border: 1px solid #21262d;
+  }
+  .btn-sm:hover { color: #c9d1d9; border-color: #30363d; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #1c2128; color: #e6edf3; border: 1px solid #30363d;
+    padding: 10px 22px; border-radius: 18px; font-size: 14px;
+    z-index: 100; pointer-events: none; white-space: nowrap;
+    opacity: 0;
+  }
+  .toast.in { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="logo">POMODORO</div>
+    <div class="pomo-count">
+      <span class="dot" id="d1"></span>
+      <span class="dot" id="d2"></span>
+      <span class="dot" id="d3"></span>
+      <span class="dot" id="d4"></span>
+      <span class="count-val" id="countLabel">0</span>
+      <span style="color:#30363d">pomos</span>
+    </div>
+  </div>
+
+  <div class="ring-wrap" id="ringWrap">
+    <svg viewBox="0 0 200 200" width="320" height="320">
+      <circle cx="100" cy="100" r="92" fill="none" stroke="#21262d" stroke-width="5"/>
+      <circle id="ring" cx="100" cy="100" r="92"
+              fill="none" stroke="#f78166" stroke-width="5" stroke-linecap="round"
+              stroke-dasharray="578.05" stroke-dashoffset="0"
+              transform="rotate(-90, 100, 100)"/>
+    </svg>
+    <div class="time-display">
+      <div class="time-num" id="timeText">25:00</div>
+      <div class="time-label" id="timeLabel">FOCUS</div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab work sel" data-mode="work">Focus</button>
+    <button class="tab break" data-mode="break">Break</button>
+    <button class="tab long" data-mode="long">Long Brk</button>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-sm" id="btnReset" title="Reset">&#x21bb;</button>
+    <button class="btn btn-play start" id="btnPlay">&#9654;</button>
+    <button class="btn btn-sm" id="btnSkip" title="Skip">&#x23ed;</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var DUR  = { work: 25*60, break: 5*60, long: 15*60 };
+  var LAB  = { work: 'FOCUS', break: 'BREAK', long: 'LONG BREAK' };
+  var RING = { work: { c: '#f78166' }, break: { c: '#7ee787' }, long: { c: '#79c0ff' } };
+  var CIRC = 2 * Math.PI * 92;
+
+  var mode      = 'work';
+  var left      = DUR.work;
+  var ticking   = false;
+  var timer     = null;
+  var sessions  = 0;
+  var todayKey  = '';
+
+  (function loadSessions() {
+    try {
+      var now = new Date();
+      todayKey = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+      var saved = window.localStorage.getItem('pomo_sessions');
+      if (saved) {
+        var parts = saved.split('|');
+        if (parts[0] === todayKey) sessions = parseInt(parts[1], 10) || 0;
+      }
+    } catch (e) {}
+  })();
+
+  function save() {
+    try { window.localStorage.setItem('pomo_sessions', todayKey + '|' + sessions); } catch (e) {}
+  }
+
+  // DOM
+  var elTime   = document.getElementById('timeText');
+  var elLabel  = document.getElementById('timeLabel');
+  var elRing   = document.getElementById('ring');
+  var elBtn    = document.getElementById('btnPlay');
+  var elTabs   = document.getElementById('tabs');
+  var elToast  = document.getElementById('toast');
+  var elCount  = document.getElementById('countLabel');
+  var elDots   = [document.getElementById('d1'), document.getElementById('d2'),
+                  document.getElementById('d3'), document.getElementById('d4')];
+
+  var toastId = null;
+
+  function show(msg) {
+    if (toastId) clearTimeout(toastId);
+    elToast.innerText = msg;
+    elToast.className = 'toast in';
+    toastId = setTimeout(function () { elToast.className = 'toast'; }, 2000);
+  }
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function fmt(sec) { return pad2(Math.floor(sec / 60)) + ':' + pad2(Math.floor(sec % 60)); }
+
+  // Per-second updates only
+  function renderTime() {
+    var t = fmt(left);
+    elTime.innerText = t;
+    elRing.setAttribute('stroke-dashoffset', CIRC * (1 - left / DUR[mode]));
+    document.title = t + ' ' + LAB[mode];
+  }
+
+  // Updates only on mode/state changes
+  function renderStatic() {
+    var r = RING[mode];
+    elRing.setAttribute('class', mode);
+    elRing.setAttribute('stroke', r.c);
+
+    elLabel.innerText = left === 0 ? 'DONE' : LAB[mode];
+
+    if (ticking) {
+      elBtn.innerHTML = '&#8545;';
+      elBtn.className = 'btn btn-play pause';
+    } else {
+      elBtn.innerHTML = '&#9654;';
+      elBtn.className = 'btn btn-play start';
+    }
+
+    var tabs = elTabs.getElementsByTagName('button');
+    for (var i = 0; i < tabs.length; i++) {
+      var m = tabs[i].getAttribute('data-mode');
+      tabs[i].className = 'tab ' + m + (m === mode ? ' sel' : '');
+    }
+
+    elCount.innerText = sessions;
+    for (var j = 0; j < elDots.length; j++) {
+      elDots[j].className = (j < sessions % 4) ? 'dot fill' : 'dot';
+    }
+  }
+
+  function renderAll() { renderTime(); renderStatic(); }
+
+  function tick() {
+    left--;
+    renderTime();
+    if (left === 0) {
+      stop();
+      if (mode === 'work') { sessions++; save(); show('Pomodoro complete! Take a break.'); }
+      else { show('Break over. Ready to focus!'); }
+    }
+  }
+
+  function go() {
+    if (left === 0) resetDuration();
+    ticking = true;
+    timer = setInterval(tick, 1000);
+    renderStatic();
+  }
+
+  function stop() {
+    ticking = false;
+    if (timer) { clearInterval(timer); timer = null; }
+    renderStatic();
+  }
+
+  function toggle() { if (ticking) stop(); else go(); }
+
+  function resetDuration() { left = DUR[mode]; }
+
+  function reset() {
+    stop();
+    resetDuration();
+    renderAll();
+  }
+
+  function setMode(m) {
+    stop();
+    mode = m;
+    resetDuration();
+    renderAll();
+  }
+
+  function skip() {
+    stop();
+    if (mode === 'work') {
+      sessions++; save();
+      setMode(sessions % 4 === 0 ? 'long' : 'break');
+    } else {
+      setMode('work');
+    }
+  }
+
+  document.getElementById('btnPlay').onclick = toggle;
+  document.getElementById('btnReset').onclick = reset;
+  document.getElementById('btnSkip').onclick = skip;
+  document.getElementById('ringWrap').onclick = toggle;
+
+  elTabs.onclick = function (e) {
+    var t = e.target || e.srcElement;
+    while (t && t !== elTabs) {
+      if (t.tagName === 'BUTTON') { setMode(t.getAttribute('data-mode')); return; }
+      t = t.parentNode;
+    }
+  };
+
+  renderAll();
+  window.resizeTo(470, 600);
+  window.moveTo((screen.availWidth - 470) / 2, (screen.availHeight - 600) / 2);
+})();
+</script>
+</body>
+</html>
